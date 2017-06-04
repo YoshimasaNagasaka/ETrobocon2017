@@ -78,6 +78,7 @@ void main_task(intptr_t unused)
     int32_t motor_ang_l, motor_ang_r;
     int32_t volt;
     int16_t gyro;
+    int8_t g_uc_StepWasDetected;    /* 階段が検知済みか TRUE:済 */
 
     /* 各オブジェクトを生成・初期化する */
     touchSensor = new TouchSensor(PORT_1);
@@ -88,6 +89,9 @@ void main_task(intptr_t unused)
     rightMotor  = new Motor(PORT_B);
     tailMotor   = new Motor(PORT_A);
     clock       = new Clock();
+
+    /* 変数初期化 */
+    g_uc_StepWasDetected = FALSE;
 
     /* LCD画面表示 */
     ev3_lcd_fill_rect(0, 0, EV3_LCD_WIDTH, EV3_LCD_HEIGHT, EV3_LCD_WHITE);
@@ -154,24 +158,33 @@ void main_task(intptr_t unused)
         else
 #endif
         {
-            /************ ライントレース ************/
-            forward = 30; /* 前進命令 */
-            if (colorSensor->getBrightness() >= (LIGHT_WHITE + LIGHT_BLACK)/2)
+            /* 現在、ジャイロセンサに掛かっている角速度[deg/sec]を取得 */
+            gyro = gyroSensor->getAnglerVelocity();
+            /* ロボットがDETECTSTEP_VEL以上振動したか */
+            if((gyro > DETECTSTEP_VEL) || (gyro < -DETECTSTEP_VEL))
             {
-                turn =  20; /* 左旋回命令 */
+                /************ ジャイロセンサテスト ************/
+                /* 階段を検知したので、停止する */
+                g_uc_StepWasDetected = TRUE;
+            }
+
+            /* 階段が検知済みか */
+            if(g_uc_StepWasDetected == FALSE)
+            {
+                /************ ライントレース ************/
+                forward = 30; /* 前進命令 */
+                if (colorSensor->getBrightness() >= (LIGHT_WHITE + LIGHT_BLACK)/2)
+                {
+                    turn =  20; /* 左旋回命令 */
+                }
+                else
+                {
+                    turn = -20; /* 右旋回命令 */
+                }
             }
             else
             {
-                turn = -20; /* 右旋回命令 */
-            }
-
-            /************ ジャイロセンサテスト ************/
-            /* 現在、ジャイロセンサに掛かっている角速度[deg/sec]を取得 */
-            gyro = gyroSensor->getAnglerVelocity();
-            if((gyro > DETECTSTEP_VEL) || (gyro < -DETECTSTEP_VEL))
-            {
-                /* ロボットがDETECTSTEP_VEL以上振動した */
-                /* 階段を検知したので、停止する */
+                /* 階段検知済みのため停止 */
                 forward = 0;
                 turn = 0;
             }
@@ -180,7 +193,7 @@ void main_task(intptr_t unused)
         /* 倒立振子制御API に渡すパラメータを取得する */
         motor_ang_l = leftMotor->getCount();
         motor_ang_r = rightMotor->getCount();
-        gyro = gyroSensor->getAnglerVelocity();
+        // gyro = gyroSensor->getAnglerVelocity();
         volt = ev3_battery_voltage_mV();
 
         /* 倒立振子制御APIを呼び出し、倒立走行するための */

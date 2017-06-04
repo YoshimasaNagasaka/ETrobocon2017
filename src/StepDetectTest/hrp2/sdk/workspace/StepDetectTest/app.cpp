@@ -79,6 +79,7 @@ void main_task(intptr_t unused)
     int32_t volt;
     int16_t gyro;
     int8_t g_uc_StepWasDetected;    /* 階段が検知済みか TRUE:済 */
+    char buf[50];    /* ディスプレー表示用 */
 
     /* 各オブジェクトを生成・初期化する */
     touchSensor = new TouchSensor(PORT_1);
@@ -166,6 +167,9 @@ void main_task(intptr_t unused)
                 /************ ジャイロセンサテスト ************/
                 /* 階段を検知したので、停止する */
                 g_uc_StepWasDetected = TRUE;
+                /* 検出時のジャイロ値を表示する */
+                sprintf(buf, "gyro_val = %d", gyro);
+                ev3_lcd_draw_string(buf, 0, CALIB_FONT_HEIGHT*1);
             }
 
             /* 階段が検知済みか */
